@@ -1,41 +1,80 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+/**
+ * app.js
+ *
+ * @date 2020-11-22
+ * @author pkalsh
+ */
+ 
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+var express = require('express')
+  , http = require('http')
+  , path = require('path');
+
+var bodyParser = require('body-parser')
+  , cookieParser = require('cookie-parser')
+  , static = require('serve-static')
+  , errorHandler = require('errorhandler');
+
+var expressErrorHandler = require('express-error-handler');
+
+var expressSession = require('express-session');
+  ;
+var flash = require('connect-flash');
+
+
+var config = require('./config/config');
+var database = require('./database/database');
+var route_loader = require('./routes/route_loader');
+
+ 
 
 var app = express();
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+app.set('views', __dirname + '/views');
+//app.set('view engine', 'ejs');
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+console.log('config.server_port : %d', config.server_port);
+app.set('port', process.env.PORT || 3000);
+ 
+
+app.use(bodyParser.urlencoded({ extended: false }))
+
+app.use(bodyParser.json())
+app.use('/public', static(path.join(__dirname, 'public')));
+ 
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use(expressSession({
+	secret:'my key',
+	resave:true,
+	saveUninitialized:true
+}));
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+
+app.use( expressErrorHandler.httpError(404) );
+app.use( errorHandler );
+
+
+//===== 서버 시작 =====//
+
+process.on('uncaughtException', function (err) {
+	console.log(err.stack);
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+process.on('SIGTERM', function () {
+    app.close();
 });
 
-module.exports = app;
+app.on('close', function () {
+	if (database.db) {
+		database.db.close();
+	}
+});
+ 
+var server = http.createServer(app).listen(app.get('port'), function(){
+	console.log('서버가 시작되었습니다. 포트 : ' + app.get('port'));
+
+	database.init(app, config);
+   
+});

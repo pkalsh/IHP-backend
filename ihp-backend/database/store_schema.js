@@ -9,10 +9,14 @@ const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 const StoreSchema = new Schema({
+	entp_id: {
+		type: String,
+		required: true
+	},
 	name: {
 		type: String,
 		index: 'hashed', 
-		'default':''
+		required: true
 	},
 	address: {
 		type: String,
@@ -21,6 +25,10 @@ const StoreSchema = new Schema({
 	tel: {
 		type: String, 
 		'default':''
+	},
+	entp_type: {
+		type: String,
+		required: true
 	},
 	geometry: {
 		'type': {type: String, 'default': "Point"},

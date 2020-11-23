@@ -3,7 +3,7 @@
  *
  * @date 2020-11-22
  * @author pkalsh
- * @updated 2020-11-22
+ * @updated 2020-11-23
  */
 
 var SchemaObj = {};
@@ -11,41 +11,13 @@ var SchemaObj = {};
 SchemaObj.createSchema = function(mongoose) {
 	
 	var StoreSchema = mongoose.Schema({
-	    entpId: {
-			type: String,
-			required: true
-		},
-		name: {
-			type: String,
-			index: 'hashed', 
-			required: true
-		},
-		address: {
-			type: String,
-			'default':''
-		},
-		postNo: {
-			type: String,
-			'default': ''
-		},
-		tel: {
-			type: String, 
-			'default':''
-		},
-		entpType: {
-			type: String,
-			required: true
-		},
-		area: {
-			type: String,
-			required: true,
-			default: ''
-		},
-		areaDetail: {
-			type: String,
-			required: true,
-			default: ''
-		},
+		name: {	type: String, index: 'hashed', required: true },
+		address: {	type: String, 'default':'' },
+		postNo: { type: String, 'default': '' },
+		tel: { type: String, 'default':'' },
+		entpType: {	type: String, required: true },
+		area: {	type: String, required: true, default: '' },
+		areaDetail: { type: String,	required: true,	default: '' },
 		geometry: {
 			'type': {type: String, 'default': "Point"},
 			coordinates: [{type: "Number"}]
@@ -65,9 +37,11 @@ SchemaObj.createSchema = function(mongoose) {
 	}
 	
 	StoreSchema.statics = {
-		findByName: function(storeName, callback) {
-			console.log('findByName 호출');
-			return this.find({name: storeName}, callback);
+		searchStore: function(largeCtg, smallCtg, type, callback) {
+			return this.find({area: largeCtg, areaDetail: smallCtg, entpType: type}, callback);
+		},
+		findById: function(id, callback) {
+			return this.find({_id: id}, callback);
 		}
 	}
 

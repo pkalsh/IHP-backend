@@ -3,61 +3,75 @@
  *
  * @date 2020-11-22
  * @author pkalsh
+ * @updated 2020-11-22
  */
 
-const mongoose = require('mongoose');
+var SchemaObj = {};
 
-const { Schema } = mongoose;
-const StoreSchema = new Schema({
-	entp_id: {
-		type: String,
-		required: true
-	},
-	name: {
-		type: String,
-		index: 'hashed', 
-		required: true
-	},
-	address: {
-		type: String,
-		'default':''
-	},
-	tel: {
-		type: String, 
-		'default':''
-	},
-	entp_type: {
-		type: String,
-		required: true
-	},
-	geometry: {
-		'type': {type: String, 'default': "Point"},
-		coordinates: [{type: "Number"}]
-	},
-	created_at: {
-		type: Date, 
-		index: {unique: false}, 
-		'default': Date.now
-	},
-	updated_at: {
-		type: Date, 
-		index: {unique: false}, 
-		'default': Date.now
-	}
-});
-
-StoreSchema.index({geometry:'2dsphere'});
+SchemaObj.createSchema = function(mongoose) {
 	
-StoreSchema.path('geometry').validate((geometry) => {
-	return geometry.length;
-}, 'geometry 칼럼의 값이 없습니다.');
+	var StoreSchema = mongoose.Schema({
+	    entpId: {
+			type: String,
+			required: true
+		},
+		name: {
+			type: String,
+			index: 'hashed', 
+			required: true
+		},
+		address: {
+			type: String,
+			'default':''
+		},
+		postNo: {
+			type: String,
+			'default': ''
+		},
+		tel: {
+			type: String, 
+			'default':''
+		},
+		entpType: {
+			type: String,
+			required: true
+		},
+		area: {
+			type: String,
+			required: true,
+			default: ''
+		},
+		areaDetail: {
+			type: String,
+			required: true,
+			default: ''
+		},
+		geometry: {
+			'type': {type: String, 'default': "Point"},
+			coordinates: [{type: "Number"}]
+		}
+	});
 
-// static으로 매장 데이터와 관련한 메서드 정의
-StoreSchema.statics = {
+	StoreSchema.index({geometry:'2dsphere'});
+	
+	StoreSchema.methods = {
+		saveStore: function(callback) {
+			var self = this;
+			this.validate((err) => {
+				if (err) return callback(err);
+				self.save(callback);
+			})
+		}
+	}
+	
+	StoreSchema.statics = {
+		findByName: function(storeName, callback) {
+			console.log('findByName 호출');
+			return this.find({name: storeName}, callback);
+		}
+	}
 
-}
+	return StoreSchema;
+};
 
-module.exports = mongoose.model('store', StoreSchema)
-
-module.exports = Schema;
-
+module.exports = SchemaObj;

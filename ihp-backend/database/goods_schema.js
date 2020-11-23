@@ -3,48 +3,61 @@
  *
  * @date 2020-11-22
  * @author pkalsh
+ * @updated 2020-11-23
  */
 
-const mongoose = require('mongoose');
+var SchemaObj = {};
 
-const { Schema } = mongoose;
-const { Types: { ObjectId} } = Schema;
-const GoodsSchema = new Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    entp_id: {
-        type: String,
-        required: true,
-        ref: 'Store'
-    },
-    price: {
-        type: Number,
-        required: true
-    },
-    total_div: {
-        type: String,
-        default: 'g'
-    },
-    total: {
-        type: Number,
-        default: 1
-    },
-    product_entp: {
-        type: String
-    },
-    detailed: {
-        type: String,
-        default: ''
+SchemaObj.createSchema = function(mongoose) {
+	
+	var GoodsSchema = mongoose.Schema({
+        name: {
+            type: String,
+            required: true,
+            index: 'hashed'
+        },
+        price: {
+            type: Number,
+            //required: true,
+            default: 0
+        },
+        totalDiv: {
+            type: String,
+            default: 'g'
+        },
+        total: {
+            type: Number,
+            default: 1
+        },
+        productEntp: {
+            type: String
+        },
+        goodSmlType: {
+            type: String,
+            default: ''
+        }
+	});
+	
+	// 스키마에 인스턴스 메소드 추가
+	GoodsSchema.methods = {
+		addGoods: (callback) => {
+            var self = this;
+
+            this.validate((err) => {
+                if (err) return callback(err);
+                self.save(callback);
+            })
+        }
     }
     
-});
+	GoodsSchema.statics = {
+		findByName: function(requestedName, callback) {
+            console.log('findByName 호출됨')
+            return this.find({name: {$regex: requestedName}}, callback);
+        }
+	}
 
-GoodsSchema.statics = {
+	return GoodsSchema;
+};
 
-}
-
-module.exports = mongoose.model('goods', GoodsSchema)
-
-module.exports = Schema;
+module.exports = SchemaObj;

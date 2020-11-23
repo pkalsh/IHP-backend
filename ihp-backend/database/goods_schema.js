@@ -52,8 +52,19 @@ SchemaObj.createSchema = function(mongoose) {
     
 	GoodsSchema.statics = {
 		findByName: function(requestedName, callback) {
-            console.log('findByName 호출됨')
             return this.find({name: {$regex: requestedName}}, callback);
+        },
+        findAllGoods: function(callback) {
+            this.find({})
+                .sort({"name":1})
+                .exec(callback);
+        },
+        listPerPage: function(options, callback) {
+            this.find(criteria)
+				.sort({"name": 1})
+				.limit(Number(options.perPage))
+				.skip(options.perPage * options.page)
+				.exec(callback);
         }
 	}
 

@@ -1,31 +1,93 @@
+/*
+ * utils related with API
+ * mainly build a local database 
+ *
+ * @date 2020-11-24
+ * @author pkalsh
+ * @updated 2020-11-26
+ */
+
+
 var request = require('request');
 var xml2js = require('xml2js');
 var parser = new xml2js.Parser();
 var apiConfig = require('../config/api-config.json');
+const axios = require('axios');
+const CryptoJS = require("crypto-js");
+
+var fillGeolocation = function(database) {
+    const access_key = apiConfig["naver-geolocation"].accessKey;
+    const secret_key = apiConfig["naver-geolocation"].secretKey;
+
+    const requestMethod = "GET";
+    const hostName = 'https://geolocation.apigw.ntruss.com'
+    const requestUrl= '/geolocation/v2/geoLocation'
+
+    const timeStamp = Math.floor(+new Date).toString();
+
+    (()=>{
+    const sortedSet = {};
+    sortedSet["ip"] = "192.168.0.11";
+    sortedSet["ext"] = "t";
+    sortedSet["responseFormatType"] = "json";
+
+    let queryString = Object.keys(sortedSet).reduce( (prev, curr)=>{
+        return prev + curr + '=' + sortedSet[curr] + '&';
+    }, "");
+
+    queryString = queryString.substr(0, queryString.length -1 );
+
+    const baseString = requestUrl + "?" + queryString;
+    const signature = makeSignature(secret_key, requestMethod, baseString, timeStamp, access_key);
+
+    const config = {
+        headers: {
+        'x-ncp-apigw-timestamp': timeStamp,
+        'x-ncp-iam-access-key' : access_key,
+        'x-ncp-apigw-signature-v2': signature
+        }
+    }
+
+    axios.get(`${hostName}${baseString}`, config)
+        .then( response=>{ console.log( response.data ); })
+        .catch( error =>{ console.log( error.response.data ); })
+    })();
+
+    function makeSignature(secretKey, method, baseString, timestamp, accessKey) {
+        const space = " ";
+        const newLine = "\n";
+        let hmac = CryptoJS.algo.HMAC.create(CryptoJS.algo.SHA256, secretKey);
+
+        hmac.update(method);
+        hmac.update(space);
+        hmac.update(baseString);
+        hmac.update(newLine);
+        hmac.update(timestamp);
+        hmac.update(newLine);
+        hmac.update(accessKey);
+        const hash = hmac.finalize();
+
+        return hash.toString(CryptoJS.enc.Base64);
+    }
+}
+
 
 var initStoreData = function(database) {
     var queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + apiConfig["price-api"].key;
 	queryParams += '&' + encodeURIComponent('goodId') + '=' + encodeURIComponent('5');
 
-	request({
+	return new Promise((resolve, reject) => {request({
 		url: apiConfig["price-api"]["store-url"] + queryParams,
 		method: 'GET'
 	}, function (error, response, body) {
-		var xml = body;
+		if (error) reject(error);
 		
-		parser.parseString(xml, (err, result) => {
+		parser.parseString(body, (err, result) => {
 			queryResult = result['response']['result'][0]['iros.openapi.service.vo.entpInfoVO'];
-			//console.dir(queryResult);
 			 
 			for(var i=0; i<queryResult.length; i++) {
-
                 var data = queryResult[i];
-                try {
-                    var latitude = data['xMapCoord'][0], longitude = data['yMapCoord'][0];
-                } catch(exception) {
-                    latitude = 0;
-                    longitude = 0;
-                }
+                var id = data['entpId'][0];
 				var name = data['entpName'][0];
 				var address = data['plmkAddrBasic'][0];		
 				var entp_type = data['entpTypeCode'][0];
@@ -40,8 +102,10 @@ var initStoreData = function(database) {
                 } catch(exception) {
                     tel = "";
                 }
+
 		
 				var store = new database["StoreModel"]({
+                    "entpId": id,
 					"name": name,
 					"address": address,
 					"tel": tel,
@@ -51,17 +115,123 @@ var initStoreData = function(database) {
 					"postNo": postNo,
 					"geometry": {
 						type: 'Point',
-						coordinates: [longitude, latitude]
+						coordinates: [0, 0]
 					}
 				});
 		
 				store.save((err) => {
 					if (err) console.dir(err);
-				});			
-			}
+				});
+            }
+            
+            resolve(response);
 		});
 	
 	});	
+});
+}
+
+var initGoodsData = function(database) {
+    let queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + apiConfig["price-api"].key;
+		
+	return new Promise((resolve, reject) => {
+        request({
+            url: apiConfig["price-api"]["product-url"] + queryParams,
+            method: 'GET'
+        }, function (error, response, body) {
+            if (error) reject(error);
+
+            parser.parseString(body, (err, result) => {
+                var resultArr = result['response']['result'][0]['item'];
+                for(let i = 0; i<resultArr.length; i++) {
+                    var queryResult = resultArr[i];
+                    
+                    var id = queryResult['goodId'][0];
+                    var name = queryResult['goodName'][0];
+                    var total = queryResult['goodTotalCnt'][0];
+                    var totalDiv = queryResult['goodTotalDivCode'][0];
+                    var productEntp = queryResult['productEntp'];
+                    var type = queryResult['goodSmlclsCode'][0];
+                            
+                    if(productEntp == undefined) {
+                        productEntp = '';
+                    }
+
+                    var product = new database["GoodsModel"]({
+                        "goodId": id,
+                        "name": name,
+                        "totalDiv": totalDiv,
+                        "price": [],
+                        "total": total,
+                        "productEntp": productEntp,
+                        "goodSmlType": type
+                    });
+
+                    product.save((err) => {
+                        if (err) console.dir(err);
+                    });
+                }
+            });
+
+            resolve(response);
+    }); });
+}
+
+
+var fillPriceData = function(database, inspectDate) {
+    console.log('fillPriceData 호출됨.');
+    for (var goodIdStr = 1000; goodIdStr<1100; goodIdStr++) {
+        goodIdStr = goodIdStr.toString();
+    database.GoodsModel.find({goodId: goodIdStr}, (err, goods) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        
+        if (goods != undefined && goods.length != 0) {
+        //for (var gidx = 420; gidx < goods.length; gidx++) {
+            var goodId = goods[0]._doc.goodId;
+            var queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + apiConfig["price-api"].key;
+            queryParams += '&' + encodeURIComponent('goodInspectDay') + '=' + encodeURIComponent(inspectDate);
+            queryParams += '&' + encodeURIComponent('goodId') + '=' + encodeURIComponent(goodId.toString());
+
+            if (goods[0]._doc.priceInfo.length == 0) {
+                request({
+                    url: apiConfig["price-api"]["price-url"] + queryParams,
+                    method: 'GET'
+                }, function (error, response, body) {
+                    if (body != undefined) {
+                        parser.parseString(body, (err, result) => {
+                            database.StoreModel.find({}, (err, stores) => {
+                                    queryResult = result['response']['result'][0]['iros.openapi.service.vo.goodPriceVO'];
+                                    for (var qidx = 0; qidx < queryResult.length; qidx++) {
+                                        var resultEntpId = queryResult[qidx]['entpId'][0];
+                                        var resultPrice = parseInt(queryResult[qidx]['goodPrice'][0]);
+                                        if (qidx==0) console.log(resultPrice);
+                                        for (var sidx = 0; sidx < stores.length; sidx++) {
+                                            var databaseEntpId = stores[sidx]._doc.entpId;
+                                            if (databaseEntpId == resultEntpId) {
+                                                var storeObjectId = stores[sidx]._doc._id;
+                                                database.GoodsModel.findByIdAndUpdate(goods[0]._doc._id,
+                                                    {'$push': {'priceInfo': {'price': resultPrice, 'entp': storeObjectId}}},
+                                                    {'new':true, 'upsert':true},
+                                                    function(err, results) {
+                                                        if (err) {
+                                                            console.error('가격 데이터 추가 중 에러 발생');
+                                                            return ;
+                                                        } 
+                                                    });                             
+                                            }
+                                        }
+                                    }
+                                });
+                        });
+                    }
+                });
+            }}
+        //}
+    });
+    }
 }
 
 /*
@@ -117,6 +287,10 @@ var requestGooglePlaceDetails = function(placeId, query) {
     })});
 }
 
+
+
 exports.initStoreData = initStoreData;
+exports.initGoodsData = initGoodsData;
 exports.requestGooglePlace = requestGooglePlace;
 exports.requestGooglePlaceDetails = requestGooglePlaceDetails;
+exports.fillPriceData = fillPriceData;

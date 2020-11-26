@@ -85,7 +85,7 @@ var listGoods = function(req, res) {
 
 /* 
  * @POST("/item/info/{public_id}")
- *    fun requestItemInfo(@Header(@Path("public_id") public_id:String): Single<Item_Info>
+ *    fun requestItemInfo(@Header(@Body body: public_id): Single<Item_Info>
  */
 var searchById = function(req, res) {
     var id = req.body.public_id || req.query.public_id || req.params.public_id;

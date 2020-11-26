@@ -71,8 +71,8 @@ var listStores = function(req, res) {
 };
 
  /*
-  * @POST("/market/info/{public_id}")
-  * 	fun requestMarketInfo(@Header(@Path("public_id") public_id:String): Single<Market_Info>
+  * @POST("/market/info/")
+  * 	fun requestMarketInfo(@Header(@Body body: public_id): Single<Market_Info>
   */
  var searchById = function(req, res) {
     var id = req.body.public_id || req.query.public_id || req.params.public_id;
@@ -87,7 +87,7 @@ var listStores = function(req, res) {
             }
 
             if (resultInfo) {
-                var jsonResponse = { resCode: 1, result: resultInfo }
+                var jsonResponse = [ { resCode: 1, result: resultInfo } ];
                 res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
                 res.write(JSON.stringify(jsonResponse));
                 res.end();

@@ -43,6 +43,9 @@ SchemaObj.createSchema = function(mongoose) {
 		},
 		findById: function(id, callback) {
 			return this.find({"_id": id}, callback);
+		},
+		getAllStores: function(callback) {
+			return this.find({}, callback);
 		}
 	}
 

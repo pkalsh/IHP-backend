@@ -88,8 +88,8 @@ var listGoods = function(req, res) {
  *    fun requestItemInfo(@Header(@Path("public_id") public_id:String): Single<Item_Info>
  */
 var searchById = function(req, res) {
-    var id = req.body.id || req.query.id || req.params.id;
-
+    var id = req.body.public_id || req.query.public_id || req.params.public_id;
+    console.log(id);
     var database = req.app.get('database');
 
     if (database.db) {

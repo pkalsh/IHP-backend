@@ -30,16 +30,15 @@ const utils = require('../utils/utils');
 var listStores = function(req, res) {
  
     var paramName = req.body.market_word || req.query.market_word || req.params.market_word;
-	var paramLC = req.body.market_one || req.query.market_one || req.params.market_one;
+	var paramType = req.body.market_one || req.query.market_one || req.params.market_one;
 	var paramSC = req.body.market_two || req.query.market_two || req.params.market_two;
-	var paramType = req.body.market_three || req.query.market_three || req.params.market_three;
 	
 	var database = req.app.get('database');
 	
 	if (database.db) {
-		database.StoresModel.searchStore(paramLC,
-										 paramSC,
+		database.StoreModel.searchStore(paramName,
 										 paramType,
+										 paramSC,
 										 function(err, results) {
             if (err) {
                 console.error('전체 조회 중 에러 발생 : ' + err.stack);
@@ -53,7 +52,7 @@ var listStores = function(req, res) {
                     var item = {};
                     item["id"] = results[i]._doc._id;
                     item["name"] = results[i]._doc.name;
-                    item["tel"] = results[i]._doc.priceInfo.tel;
+                    item["address"] = results[i]._doc.address;
                     arrResponse.push(item);
                 }
 
@@ -76,12 +75,11 @@ var listStores = function(req, res) {
   * 	fun requestMarketInfo(@Header(@Path("public_id") public_id:String): Single<Market_Info>
   */
  var searchById = function(req, res) {
-    var id = req.body.id || req.query.id || req.params.id;
-
+    var id = req.body.public_id || req.query.public_id || req.params.public_id;
     var database = req.app.get('database');
 
     if (database.db) {
-        database.StoresModel.findById(id, function(err, resultInfo) {
+        database.StoreModel.findById(id, function(err, resultInfo) {
             if (err) {
                 console.error('전체 조회 중 에러 발생 : ' + err.stack);
                 utils.replyErrorCode(res);

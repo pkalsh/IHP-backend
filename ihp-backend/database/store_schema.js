@@ -11,6 +11,7 @@ var SchemaObj = {};
 SchemaObj.createSchema = function(mongoose) {
 	
 	var StoreSchema = mongoose.Schema({
+		entpId: { type: String, required: true },
 		name: {	type: String, index: 'hashed', required: true },
 		address: {	type: String, 'default':'' },
 		postNo: { type: String, 'default': '' },
@@ -18,6 +19,7 @@ SchemaObj.createSchema = function(mongoose) {
 		entpType: {	type: String, required: true },
 		area: {	type: String, required: true, default: '' },
 		areaDetail: { type: String,	required: true,	default: '' },
+
 		geometry: {
 			'type': {type: String, 'default': "Point"},
 			coordinates: [{type: "Number"}]
@@ -28,20 +30,19 @@ SchemaObj.createSchema = function(mongoose) {
 	
 	StoreSchema.methods = {
 		saveStore: function(callback) {
-			var self = this;
 			this.validate((err) => {
 				if (err) return callback(err);
-				self.save(callback);
+				this.save(callback);
 			})
 		}
 	}
 	
 	StoreSchema.statics = {
-		searchStore: function(largeCtg, smallCtg, type, callback) {
-			return this.find({area: largeCtg, areaDetail: smallCtg, entpType: type}, callback);
+		searchStore: function(marketName, type, smallCtg, callback) {
+			return this.find({name: {"$regex": marketName}, areaDetail: smallCtg, entpType: type}, callback);
 		},
 		findById: function(id, callback) {
-			return this.find({_id: id}, callback);
+			return this.find({"_id": id}, callback);
 		}
 	}
 

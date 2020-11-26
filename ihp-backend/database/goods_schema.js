@@ -11,7 +11,8 @@ var SchemaObj = {};
 SchemaObj.createSchema = function(mongoose) {
 	
 	var GoodsSchema = mongoose.Schema({
-        name: { type: String, required: true, index: 'hashed' },
+        goodId: { type: String },
+        name: { type: String, index: 'hashed' },
         priceInfo: [{
             price: { type: Number, default: 0 },
             entp: { type: mongoose.Schema.Types.ObjectId, ref: 'stores' }
@@ -32,26 +33,41 @@ SchemaObj.createSchema = function(mongoose) {
                 self.save(callback);
             })
         },
-        updatePrice: function(entpId, price, callback) {
-            var self = this;
-
-        }
     }
     
 	GoodsSchema.statics = {
 		findByName: function(requestedName, callback) {
             return this.find({name: {$regex: requestedName}}, callback);
         },
-        findAllGoods: function(type, callback) {
+        findAllGoods: function(type, sortingCriterion, requestedName, callback) {
             this.find({ name: {$regex: requestedName}, goodSmlType:type })
-                .sort({'name': 1})
+                .populate('entp', 'name geometry address')
+                .populate('priceInfo.entp')
+                .sort({sortingCriterion: 1})
                 .exec(callback);
         },
         findById: function(id, callback) {
             this.find({_id: id})
-                .populate('entp', 'name geometry tel address')
+                .populate('entp', 'name geometry address')
                 .populate('priceInfo.entp')
                 .exec(callback);
+        },
+        sortPriceAsc: function(id, callback) { 
+            this.aggregate([
+            // Initial document match (uses index, if a suitable one is available)
+                { $match: {
+                    _id : id
+                }},
+            
+                // Expand the scores array into a stream of documents
+                { $unwind: '$priceInfo' },
+    
+                // Sort in descending order
+                { $sort: {
+                    'priceInfo.price': 1
+                }}
+            ]
+            ).exec(callback);
         }
 	}
 

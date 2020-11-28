@@ -41,7 +41,8 @@ function searchPubTransPathAJAX(sx,sy,ex,ey) {
 	}
 }
 
-function calcCost(combination_set){
+function calcCost(mapOutput){
+    var combination_set = makeComSet(mapOutput);
     var ret = [];
     for(var i = 0; i < combination_set.length; i++){
         var sx = combination_set[i][0][0];
@@ -74,4 +75,18 @@ function everyPath(cost){
     path['path'].push(cost[7]).push(cost[8]);
 
     return path;
+}
+
+function makeComSet(mapOutput){
+    combination_set = [];
+    for(var i = 0; i < mapOutput["result"].length; i++){
+        var info = {};
+        info.id = mapOutput["result"][i]["id"];
+        info.name = mapOutput["result"][i]["name"];
+        info.address = mapOutput["result"][i]["address"];
+        var x = mapOutput["result"][i]["geometry"]["coordinates"][0];
+        var y = mapOutput["result"][i]["geometry"]["coordinates"][1];
+        combination_set.push([x,y,info]);
+    }
+    return combination_set;
 }

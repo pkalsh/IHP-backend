@@ -7,68 +7,64 @@
  * @updated 2020-11-26
  */
 
-
+var async = require('async');
 var request = require('request');
 var xml2js = require('xml2js');
 var parser = new xml2js.Parser();
 var apiConfig = require('../config/api-config.json');
-const axios = require('axios');
-const CryptoJS = require("crypto-js");
+const { makeQuery } = require('./utils');
 
-var fillGeolocation = function(database) {
-    const access_key = apiConfig["naver-geolocation"].accessKey;
-    const secret_key = apiConfig["naver-geolocation"].secretKey;
+var fillGeolocation = async function(database) {
+    var base_uri = "https://dapi.kakao.com/v2/local/search/keyword.json";
+    var header = {
+        'Authorization': 'KakaoAK ' + apiConfig.kakao.key,
+    };
 
-    const requestMethod = "GET";
-    const hostName = 'https://geolocation.apigw.ntruss.com'
-    const requestUrl= '/geolocation/v2/geoLocation'
+    database.StoreModel.find({}, async (err, stores) => {
+        if (err) console.error(err);
+        else {
+            for (var i=300; i<stores.length; i++) {
+                var id = stores[i]._doc._id;
+                console.log(i + " " + id);
+                var parameters = [['sort', 'accuracy'], ['query', stores[i]._doc.address]];
+                var query = makeQuery(base_uri, parameters);
+                var options = {
+                    url: query,
+                    method: 'GET',
+                    headers: header
+                };
 
-    const timeStamp = Math.floor(+new Date).toString();
+                
+                request(options, async (error, response, body) => {
 
-    (()=>{
-    const sortedSet = {};
-    sortedSet["ip"] = "192.168.0.11";
-    sortedSet["ext"] = "t";
-    sortedSet["responseFormatType"] = "json";
+                    if (error) console.error(error);
+                    else if (response.statusCode == 200) {
+                        var jsonResult = JSON.parse(body);
+                        if (jsonResult['documents'].length) {
+                            let long = Number(jsonResult['documents'][0]['x']);
+                            let lat = Number(jsonResult['documents'][0]['y']);
+                            //console.log(long + " " + lat);
+                            database.StoreModel.setGeometry(id, long, lat)
+                                .then((err, result) => {
+                                    if (err) console.error(err);
+                                    else console.log(result);
+                                });
+                        }
+                    }
+                });
 
-    let queryString = Object.keys(sortedSet).reduce( (prev, curr)=>{
-        return prev + curr + '=' + sortedSet[curr] + '&';
-    }, "");
-
-    queryString = queryString.substr(0, queryString.length -1 );
-
-    const baseString = requestUrl + "?" + queryString;
-    const signature = makeSignature(secret_key, requestMethod, baseString, timeStamp, access_key);
-
-    const config = {
-        headers: {
-        'x-ncp-apigw-timestamp': timeStamp,
-        'x-ncp-iam-access-key' : access_key,
-        'x-ncp-apigw-signature-v2': signature
+                await sleep(2000);
+                
+            }
         }
-    }
+    });
 
-    axios.get(`${hostName}${baseString}`, config)
-        .then( response=>{ console.log( response.data ); })
-        .catch( error =>{ console.log( error.response.data ); })
-    })();
+}
 
-    function makeSignature(secretKey, method, baseString, timestamp, accessKey) {
-        const space = " ";
-        const newLine = "\n";
-        let hmac = CryptoJS.algo.HMAC.create(CryptoJS.algo.SHA256, secretKey);
-
-        hmac.update(method);
-        hmac.update(space);
-        hmac.update(baseString);
-        hmac.update(newLine);
-        hmac.update(timestamp);
-        hmac.update(newLine);
-        hmac.update(accessKey);
-        const hash = hmac.finalize();
-
-        return hash.toString(CryptoJS.enc.Base64);
-    }
+const sleep = (ms) => {
+    return new Promise(resolve=>{
+        setTimeout(resolve,ms)
+    })
 }
 
 
@@ -294,3 +290,4 @@ exports.initGoodsData = initGoodsData;
 exports.requestGooglePlace = requestGooglePlace;
 exports.requestGooglePlaceDetails = requestGooglePlaceDetails;
 exports.fillPriceData = fillPriceData;
+exports.fillGeolocation = fillGeolocation;

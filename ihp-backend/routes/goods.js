@@ -33,6 +33,7 @@ var listGoods = function(req, res) {
     var paramSorting = req.body.item_two || req.query.item_two || req.params.item_two;
     var paramWord = req.body.item_word || req.query.item_word || req.params.item_word;
     var database = req.app.get('database');
+    console.log("/item/list/" + paramWord + "/" + paramType + "/" + paramSorting + " 요청 받음.");
 
     // TODO 입력하지 않았을 땐 뭐로 오나요?
     if(paramSorting == "") {
@@ -89,7 +90,7 @@ var listGoods = function(req, res) {
  */
 var searchById = function(req, res) {
     var id = req.body.public_id || req.query.public_id || req.params.public_id;
-    console.log(id);
+    console.log("/item/info/" + id + ": 요청 받음.");
     var database = req.app.get('database');
 
     if (database.db) {
@@ -101,7 +102,7 @@ var searchById = function(req, res) {
             }
 
             if (resultInfo) {
-                var jsonResponse = [ { resCode: 1, result: resultInfo } ];
+                var jsonResponse = { resCode: 1, result: [resultInfo] };
                 res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
                 res.write(JSON.stringify(jsonResponse));
                 res.end();

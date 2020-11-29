@@ -32,7 +32,8 @@ var listStores = function(req, res) {
     var paramName = req.body.market_word || req.query.market_word || req.params.market_word;
 	var paramType = req.body.market_one || req.query.market_one || req.params.market_one;
 	var paramSC = req.body.market_two || req.query.market_two || req.params.market_two;
-	
+    console.log("/market/list/" + paramName + "/" + paramType + "/" + paramSC + " 요청 받음.");
+
 	var database = req.app.get('database');
 	
 	if (database.db) {
@@ -76,6 +77,7 @@ var listStores = function(req, res) {
   */
  var searchById = function(req, res) {
     var id = req.body.public_id || req.query.public_id || req.params.public_id;
+    console.log("/market/info/" + id + ": 요청 받음.");
     var database = req.app.get('database');
 
     if (database.db) {
@@ -87,7 +89,7 @@ var listStores = function(req, res) {
             }
 
             if (resultInfo) {
-                var jsonResponse = [ { resCode: 1, result: resultInfo } ];
+                var jsonResponse = { resCode: 1, result: [resultInfo] };
                 res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
                 res.write(JSON.stringify(jsonResponse));
                 res.end();

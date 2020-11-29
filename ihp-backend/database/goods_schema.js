@@ -52,13 +52,15 @@ SchemaObj.createSchema = function(mongoose) {
                 .populate('priceInfo.entp')
                 .exec(callback);
         },
+        findByIdOrg: async function(id, callback) {
+            return this.find({_id: id}, callback);
+        },
         sortPriceAsc: function(id, callback) { 
             this.aggregate([
             // Initial document match (uses index, if a suitable one is available)
                 { $match: {
                     _id : id
                 }},
-            
                 // Expand the scores array into a stream of documents
                 { $unwind: '$priceInfo' },
     

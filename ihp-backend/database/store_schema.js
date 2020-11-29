@@ -46,6 +46,20 @@ SchemaObj.createSchema = function(mongoose) {
 		},
 		getAllStores: function(callback) {
 			return this.find({}, callback);
+		},
+		setGeometry: function(id, long, lat, callback) {
+            var query = {_id: id};
+            var update = {$set: {'geometry.coordinates': [long, lat]}};
+			
+			console.log(id + " " + long + " " + lat);
+            return this.findOneAndUpdate(query, update, callback);            
+		},
+		findCircle: function(centerLong, centerLat, radius, callback) {
+			return this.find().where('geometry').within(
+				{center: [parseFloat(centerLong), parseFloat(centerLat)],
+					radius: parseFloat(radius/6371000),
+					unique: true, spherical: true
+				}).exec(callback);
 		}
 	}
 

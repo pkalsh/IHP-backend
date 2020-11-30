@@ -1,5 +1,3 @@
-const async = require('async');
-
 /*
  * @Param database  : ODM object 
  * @Param start     : start point of path in geometry coordinates
@@ -13,12 +11,12 @@ const async = require('async');
  * 
  *                      [{
  *                          "stores': array of {_id, name, geometry} object,
- *                          "buying_cases" : array of { store_id, price, idx } object => one case
+ *                          "buying_cases" : array of { store_id, price } object => one case
  *                                           Actual saved cases is array of case (upper representation)
  *                      }]
  * } 
  */
-exports.selectAllCasesOfBuying = async (database, start, end, waypoints, itemList) => 
+exports.selectAllCasesOfBuying = async (database, start, end, waypoints, itemList, radius) => 
 {
     const itemNum = itemList.length;
     const waypointsNum = waypoints.length;
@@ -33,14 +31,12 @@ exports.selectAllCasesOfBuying = async (database, start, end, waypoints, itemLis
     centerLong /= (2 + waypointsNum);
     centerLat /= (2 + waypointsNum);
 
-    var storesAndBuyingCases = {};
-    const candidates = await drawUpCandidates(database, centerLong, centerLat, 20000);
-    const sellingItemIdxForStores = await makeCombinationElements(database, candidates, itemList);
-    const buyingCases = makeAllCombinations(sellingItemIdxForStores, candidates, itemNum);
 
-    storesAndBuyingCases['stores'] = candidates;
-    storesAndBuyingCases['buying_cases'] = buyingCases;
-    return storesAndBuyingCases;
+    const candidates = await drawUpCandidates(database, centerLong, centerLat, radius);
+    const sellingItemIdxForStores = await makeCombinationElements(database, candidates, itemList);
+    const buyingCases = makeAllCombinations(sellingItemIdxForStores, candidates, itemNum, start, end, waypoints);
+    
+    return buyingCases;
 }
 
 async function drawUpCandidates(database, centerLong, centerLat, radius) {
@@ -61,7 +57,6 @@ async function drawUpCandidates(database, centerLong, centerLat, radius) {
         .catch(err => {
             console.error(err);
         });
-
     return candidateStores;
 }
 
@@ -107,36 +102,59 @@ async function makeCombinationElements(database, candidates, itemList) {
     return sellingItemIdxForStores;
 }
 
-function makeAllCombinations(combinationElements, storeInfo, itemNum) {
+function makeAllCombinations(combinationElements, storeInfo, itemNum, start, end, waypoints) {
     var allCombinations = [];
-    var combination = [];
+    var combination = [start];
+    var wpVisited = Array.from({length: waypoints.length}, () => 0);
 
-    searchBuyingItem(0, allCombinations, combination, combinationElements, storeInfo, itemNum);
+    searchBuyingItem(0, 0, 0, allCombinations, combination, combinationElements, 
+                        storeInfo, itemNum, end, waypoints, waypoints.length, 0, wpVisited);
 
     return allCombinations;
 }
 
-function searchBuyingItem(item, allCombinations, combination, combinationElements, storeInfo, itemNum) {
-    if (item == itemNum) {
+function searchBuyingItem(totalWaypoint, itemNow, waypointNow, allCombinations, combination, combinationElements,
+                             storeInfo, itemNum, end, waypoints, waypointsNum, accumulatedPrice, wpVisited) {
+    if (totalWaypoint >= (itemNum + waypointsNum)) {
         let copied = combination.slice();
-        allCombinations.push(copied);
+        copied.push(end);
+        let pushed = { 'total_price': accumulatedPrice, 'path': copied };
+        allCombinations.push(pushed);
         return ;
     }
     else {
         let storeNum = combinationElements.length;
-        for (let storeIdx = 0; storeIdx < storeNum; storeIdx++) {
+        if (itemNow < itemNum) {
+            for (let storeIdx = 0; storeIdx < storeNum; storeIdx++) {
 
-            let itemIdx = isItemInStore(item, combinationElements[storeIdx]);
-            if (itemIdx != 0) {
-                
-                combination.push({'store_id': storeInfo[storeIdx]._id, 
-                                  'price': combinationElements[storeIdx][itemIdx-1]['price'],
-                                  'idx': combinationElements[storeIdx][itemIdx-1]['idx'],
-                                }); 
-                searchBuyingItem(item+1, allCombinations, combination, combinationElements, storeInfo, itemNum);
-                combination.pop();
+                let itemIdx = isItemInStore(itemNow, combinationElements[storeIdx]);
+                if (itemIdx != 0) {
+                    
+                    combination.push(storeInfo[storeIdx].geometry.coordinates);
+                    let accumulatedThisStep = accumulatedPrice + combinationElements[storeIdx][itemIdx-1].price;
+                    searchBuyingItem(totalWaypoint+1, itemNow+1, waypointNow, allCombinations, combination, combinationElements, 
+                                        storeInfo, itemNum, end, waypoints, waypointsNum, accumulatedThisStep, wpVisited);
+                    combination.pop();
+                }
             }
         }
+
+        if (waypointNow < waypointsNum) {
+            for (let wpIdx = 0; wpIdx < waypointsNum; wpIdx++) {
+
+                if (wpVisited[wpIdx] == 0) {
+                    
+                    wpVisited[wpIdx] = 1;
+                    combination.push(waypoints[wpIdx]);
+                    searchBuyingItem(totalWaypoint+1, itemNow, waypointNow+1, allCombinations, combination, combinationElements, 
+                                        storeInfo, itemNum, end, waypoints, waypointsNum, accumulatedPrice, wpVisited);
+                    combination.pop();
+                    wpVisited[wpIdx] = 0;
+                }
+            }
+        }
+
+
     }
 }
 

@@ -35,13 +35,13 @@ var listGoods = function(req, res) {
     var database = req.app.get('database');
     console.log("/item/list/" + paramWord + "/" + paramType + "/" + paramSorting + " 요청 받음.");
 
-    // TODO 입력하지 않았을 땐 뭐로 오나요?
     if(paramSorting == "") {
-        paramSotring = 'name';
+        paramSotring = "1";
     }
 
     if (database.db) {
-        database.GoodsModel.findAllGoods(paramType, paramSorting, paramWord, function(err, results) {
+        
+        database.GoodsModel.findAllGoods(paramType, paramWord, function(err, results) {
             if (err) {
                 console.error('전체 조회 중 에러 발생 : ' + err.stack);
                 utils.replyErrorCode(res);
@@ -53,25 +53,21 @@ var listGoods = function(req, res) {
                 for(let i=0; i < results.length; i++) {
                     var item = {};
                     var selected_doc = results[i]._doc;
-                    database.GoodsModel.sortPriceAsc(selected_doc._id, 
-                                                     (err, sortResult) => {
-                                                         if (err) console.dir(err);
-                                                         else {
-                                                             console.log('정렬 성공');
-                                                         }
-                                                     });
-                                                     
+                    
+                    selected_doc["priceInfo"].sort((left,right) => {
+                        return left.price < right.price ? -1 : left.price > right.price ? 1 : 0;
+                    });
 
                     item["id"] = selected_doc._id;
                     item["name"] = selected_doc.name;
                     if (selected_doc.priceInfo.length > 0) {
-                        item["priceInfo"] = selected_doc.priceInfo[0].price 
+                        item["priceInfo"] = selected_doc.priceInfo[0].price;
                     }
                     arrResponse.push(item);
                 }
 
-                var jsonResponse = { resCode: 1, result: arrResponse }
-                //console.dir(jsonResponse);
+                sortGoodsJsonResult(paramSorting, arrResponse);
+                var jsonResponse = { resCode: 1, result: arrResponse };
                 res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
                 res.write(JSON.stringify(jsonResponse));
                 res.end();
@@ -102,7 +98,7 @@ var searchById = function(req, res) {
             }
 
             if (resultInfo) {
-                var jsonResponse = { resCode: 1, result: [resultInfo] };
+                var jsonResponse = { resCode: 1, result: resultInfo };
                 res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
                 res.write(JSON.stringify(jsonResponse));
                 res.end();
@@ -112,6 +108,33 @@ var searchById = function(req, res) {
         });
     } else {
         utils.replyErrorCode(res);
+    }
+}
+
+function sortGoodsJsonResult (criterion, response) {
+    if (criterion == "1") {
+        response.sort((left, right) => {
+            return left.priceInfo.price < right.priceInfo.price ? 
+                    -1 : left.priceInfo.price > right.priceInfo.price ? 1 : 0;
+        });
+    }
+    else if (criterion == "2") {
+        response.sort((left, right) => {
+            return left.priceInfo.price > right.priceInfo.price ? 
+                    -1 : left.priceInfo.price < right.priceInfo.price ? 1 : 0;
+        });
+    }
+    else if (criterion == "3") {
+        response.sort((left, right) => {
+            return left.name < right.name ? 
+                    -1 : left.name > right.name ? 1 : 0;
+        });
+    }
+    else if (criterion == "4") {
+        response.sort((left, right) => {
+            return left.name > right.name ? 
+                    -1 : left.name < right.name ? 1 : 0;
+        });
     }
 }
 

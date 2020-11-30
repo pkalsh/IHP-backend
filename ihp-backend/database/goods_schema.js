@@ -39,11 +39,10 @@ SchemaObj.createSchema = function(mongoose) {
 		findByName: function(requestedName, callback) {
             return this.find({name: {$regex: requestedName}}, callback);
         },
-        findAllGoods: function(type, sortingCriterion, requestedName, callback) {
+        findAllGoods: function(type, requestedName, callback) {
             this.find({ name: {$regex: requestedName}, goodSmlType:type })
                 .populate('entp', 'name geometry address')
                 .populate('priceInfo.entp')
-                .sort({sortingCriterion: 1})
                 .exec(callback);
         },
         findById: function(id, callback) {
@@ -55,22 +54,6 @@ SchemaObj.createSchema = function(mongoose) {
         findByIdOrg: async function(id, callback) {
             return this.find({_id: id}, callback);
         },
-        sortPriceAsc: function(id, callback) { 
-            this.aggregate([
-            // Initial document match (uses index, if a suitable one is available)
-                { $match: {
-                    _id : id
-                }},
-                // Expand the scores array into a stream of documents
-                { $unwind: '$priceInfo' },
-    
-                // Sort in descending order
-                { $sort: {
-                    'priceInfo.price': 1
-                }}
-            ]
-            ).exec(callback);
-        }
 	}
 
 	return GoodsSchema;

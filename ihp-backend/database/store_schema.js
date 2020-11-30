@@ -45,14 +45,15 @@ SchemaObj.createSchema = function(mongoose) {
 			return this.find({"_id": id}, callback);
 		},
 		getAllStores: function(callback) {
-			return this.find({}, callback);
+			this.find({})
+				.sort({'area': 1, 'areaDetail': 1})
+				.exec(callback);
 		},
 		setGeometry: function(id, long, lat, callback) {
             var query = {_id: id};
             var update = {$set: {'geometry.coordinates': [long, lat]}};
 			
-			console.log(id + " " + long + " " + lat);
-            return this.findOneAndUpdate(query, update, callback);            
+			return this.findOneAndUpdate(query, update, callback);            
 		},
 		findCircle: function(centerLong, centerLat, radius, callback) {
 			return this.find().where('geometry').within(

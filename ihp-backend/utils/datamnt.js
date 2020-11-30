@@ -7,17 +7,16 @@
  * @updated 2020-11-26
  */
 
-var async = require('async');
 var request = require('request');
 var xml2js = require('xml2js');
 var parser = new xml2js.Parser();
-var apiConfig = require('../config/api-config.json');
 const { makeQuery } = require('./utils');
+require('dotenv').config();
 
 var fillGeolocation = async function(database) {
     var base_uri = "https://dapi.kakao.com/v2/local/search/keyword.json";
     var header = {
-        'Authorization': 'KakaoAK ' + apiConfig.kakao.key,
+        'Authorization': 'KakaoAK ' + process.env.KAKAO_API_KEY,
     };
 
     database.StoreModel.find({}, async (err, stores) => {
@@ -43,7 +42,6 @@ var fillGeolocation = async function(database) {
                         if (jsonResult['documents'].length) {
                             let long = Number(jsonResult['documents'][0]['x']);
                             let lat = Number(jsonResult['documents'][0]['y']);
-                            //console.log(long + " " + lat);
                             database.StoreModel.setGeometry(id, long, lat)
                                 .then((err, result) => {
                                     if (err) console.error(err);
@@ -69,11 +67,11 @@ const sleep = (ms) => {
 
 
 var initStoreData = function(database) {
-    var queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + apiConfig["price-api"].key;
+    var queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + process.env.PRICE_API_KEY;
 	queryParams += '&' + encodeURIComponent('goodId') + '=' + encodeURIComponent('5');
 
 	return new Promise((resolve, reject) => {request({
-		url: apiConfig["price-api"]["store-url"] + queryParams,
+		url: process.env.STORE_URL + queryParams,
 		method: 'GET'
 	}, function (error, response, body) {
 		if (error) reject(error);
@@ -128,11 +126,11 @@ var initStoreData = function(database) {
 }
 
 var initGoodsData = function(database) {
-    let queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + apiConfig["price-api"].key;
+    let queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + process.env.PRICE_API_KEY;
 		
 	return new Promise((resolve, reject) => {
         request({
-            url: apiConfig["price-api"]["product-url"] + queryParams,
+            url: process.env.PRODUCT_API + queryParams,
             method: 'GET'
         }, function (error, response, body) {
             if (error) reject(error);
@@ -187,13 +185,13 @@ var fillPriceData = function(database, inspectDate) {
         if (goods != undefined && goods.length != 0) {
         //for (var gidx = 420; gidx < goods.length; gidx++) {
             var goodId = goods[0]._doc.goodId;
-            var queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + apiConfig["price-api"].key;
+            var queryParams = '?' + encodeURIComponent('ServiceKey') + '=' + process.env.PRICE_API_KEY;
             queryParams += '&' + encodeURIComponent('goodInspectDay') + '=' + encodeURIComponent(inspectDate);
             queryParams += '&' + encodeURIComponent('goodId') + '=' + encodeURIComponent(goodId.toString());
 
             if (goods[0]._doc.priceInfo.length == 0) {
                 request({
-                    url: apiConfig["price-api"]["price-url"] + queryParams,
+                    url: process.env.PRICE_URL + queryParams,
                     method: 'GET'
                 }, function (error, response, body) {
                     if (body != undefined) {
@@ -230,64 +228,9 @@ var fillPriceData = function(database, inspectDate) {
     }
 }
 
-/*
- * @param place: place keyword, place name to search
- * @param query: requested information, array type
- * @return: json object for result
- */
-var requestGooglePlace = function(place, query) {
-    var queryString = "";
-    for(var i=0; i<query.length; i++) {
-        queryString += query[i];
-        if(i != query.length-1) queryString += ",";
-    }
-
-    return new Promise ((resolve, reject) => {
-        request({
-        url:"https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input="+ encodeURIComponent(place) + 
-        "&inputtype=textquery&fields="+ queryString + "&key=" + apiConfig["google-api"].key,
-    }, function (error, response, body) {
-        if(error) reject(error);
-        else {
-            const parsedResult = JSON.parse(body);
-            console.dir(parsedResult);
-            resolve(parsedResult);
-        }
-    });
-    });
-}
-
-/*
- * @param place: placeId, which is supported by google api
- * @param query: requested information, array type
- * @return: json object for result
- */
-var requestGooglePlaceDetails = function(placeId, query) {
-    var queryString = "";
-    for(var i=0; i<query.length; i++) {
-        queryString += query[i];
-        if(i != query.length-1) queryString += ",";
-    }
-
-    return new Promise((resolve, reject) => {
-        request({
-        url:"https://maps.googleapis.com/maps/api/place/details/json?place_id="+ encodeURIComponent(placeId) + 
-        "&fields="+ queryString + "&key=" + apiConfig["google-api"].key,
-    }, function (error, response, body) {
-        if(error) reject(error);
-        else {
-            const parsedResult = JSON.parse(body);
-            console.dir(parsedResult);
-            resolve(parsedResult);
-        }
-    })});
-}
-
 
 
 exports.initStoreData = initStoreData;
 exports.initGoodsData = initGoodsData;
-exports.requestGooglePlace = requestGooglePlace;
-exports.requestGooglePlaceDetails = requestGooglePlaceDetails;
 exports.fillPriceData = fillPriceData;
 exports.fillGeolocation = fillGeolocation;

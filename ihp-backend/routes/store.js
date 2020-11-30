@@ -89,7 +89,8 @@ var listStores = function(req, res) {
             }
 
             if (resultInfo) {
-                var jsonResponse = { resCode: 1, result: [resultInfo] };
+                var jsonResponse = { resCode: 1, result: resultInfo };
+                console.dir(jsonResponse);
                 res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
                 res.write(JSON.stringify(jsonResponse));
                 res.end();

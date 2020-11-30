@@ -39,25 +39,6 @@ function searchPubTransPathAJAX(sx,sy,ex,ey) {
 	}
 }
 
-function calcCost(mapOutput){
-    var combination_set = makeComSet(mapOutput);
-    var ret = [];
-    for(var i = 0; i < combination_set.length; i++){
-        var sx = combination_set[i][0][0];
-        var sy = combination_set[i][0][1];
-        //var info = combination_set[i][0][2];
-        var cost = [];
-        for(var j = 1; j < combination_set[i].length; j++){
-            var ex = combination_set[i][j][0];
-            var ey = combination_set[i][j][1];
-            cost.push(searchPubTransPathAJAX(sx,sy,ex,ey));
-            var sx = ex;
-            var sy = ey;
-        }
-        ret.push(onePath(cost));
-    }
-    return ret;
-}
 
 function onePath(cost){
     path = {'payment':0, 'totalDistance':0, 'totalTime':0, 'totalWalk':0, 'totalWalkTime':0, 'path':[] };
@@ -89,26 +70,28 @@ function makeComSet(mapOutput){
     return combination_set;
 }
 
-function sortPath(criteria,everyPath){
-    everyPath.sort(function(a,b){
-        switch(criteria){
-            case 'payment':
-                return a.payment < b.payment ? -1 : a.payment > b.payment ? 1 : 0;
-            case 'totalDistance':
-                return a.totalDistance < b.totalDistance ? -1 : a.totalDistance > b.totalDistance ? 1 : 0;
-            case 'totalTime':
-                return a.totalTime < b.totalTime ? -1 : a.totalTime > b.totalTime ? 1 : 0;
-            case 'totalWalk':
-                return a.totalWalk < b.totalWalk ? -1 : a.totalWalk > b.totalWalk ? 1 : 0;
-            case 'totalWalkTime':
-                return a.totalWalkTime < b.totalWalkTime ? -1 : a.totalWalkTime > b.totalWalkTime ? 1 : 0;
+
+
+
+module.exports.calcCost(mapOutput){
+    var combination_set = makeComSet(mapOutput);
+    var ret = [];
+    for(var i = 0; i < combination_set.length; i++){
+        var sx = combination_set[i][0][0];
+        var sy = combination_set[i][0][1];
+        //var info = combination_set[i][0][2];
+        var cost = [];
+        for(var j = 1; j < combination_set[i].length; j++){
+            var ex = combination_set[i][j][0];
+            var ey = combination_set[i][j][1];
+            cost.push(searchPubTransPathAJAX(sx,sy,ex,ey));
+            var sx = ex;
+            var sy = ey;
         }
-        
-    });
-    return everyPath;
+        ret.push(onePath(cost));
+    }
+    return ret;
 }
-
-
 /*
  * @POST("/map/location")
  * fun requestMapLocation (@Body body: Map_Input : Single<ArrayList<Map_Output>>

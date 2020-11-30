@@ -1,16 +1,12 @@
 /*
-    받아오는 매개변수가 [ [[],[],[]], ... ,[[],[],[]] ...] 형태의  삼중리스트라고 가정.. 또는 4중
-    combination_set = [
-        [
-            [x,y,info], [x,y,info], [x,y,info], [x,y,info],...
-        ]
-        ,[ ... ]
-        ,[ ... ]
-        ...
-    ]
-    info는 상품에 대한 정보를 담은 변수 또는 리스트
-    [x,y,info]에서 x,y는 해당 위치의 좌표 vlaue
-    아래 코드에서는 [x,y,info],[x,y,info]... 가 순서대로 나열되어있다고 가정.
+[
+    {
+        'total_price','path':[a,b,c,d]
+    }
+    ...
+]
+
+=> path는 [x,y], [x,y]... 로 이루어짐.
 */
 
 const API_KEY = 'my api key';
@@ -32,7 +28,10 @@ function searchPubTransPathAJAX(sx,sy,ex,ey) {
             ret.push(section['result']['path']['info']['totalTime']);
             ret.push(section['result']['path']['info']['totalWalk']);
             ret.push(section['result']['path']['info']['totalWalkTime']);
-            ret.push(sx).push(sy).push(ex).push(ey);
+            ret.push(sx);
+            ret.push(sy);
+            ret.push(ex);
+            ret.push(ey);
 
             return ret;
 		}
@@ -49,46 +48,50 @@ function onePath(cost){
         path['totalTime'] += cost[i][2];
         path['totalWalk'] += cost[i][3];
         path['totalWalkTime'] += cost[i][4];
-        path['path'].push(cost[i][5]).push(cost[i][6]);
+        path['path'].push(cost[i][5]);
+        path['path'].push(cost[i][6]);
     }
-    path['path'].push(cost[i][7]).push(cost[i][8]);
+    path['path'].push(cost[i-1][7]);
+    path['paht'].push(cost[i-1][8]);
 
     return path;
 }
 
+/*
 function makeComSet(mapOutput){
     combination_set = [];
-    for(var i = 0; i < mapOutput["result"].length; i++){
-        var info = {};
-        info.id = mapOutput["result"][i]["id"];
-        info.name = mapOutput["result"][i]["name"];
-        info.address = mapOutput["result"][i]["address"];
-        var x = mapOutput["result"][i]["geometry"]["coordinates"][0];
-        var y = mapOutput["result"][i]["geometry"]["coordinates"][1];
-        combination_set.push([x,y,info]);
+    
+    for(var a = 0; a < mapOutput.length; a++){
+        for(var i = 0; i < mapOutput[a]["path"].length; i++){
+            var total_price = mapOutput[a]["total_price"];
+            var x = mapOutput[a]['path'][i][0];
+            var y = mapOutput[a]['path'][i][1];
+            combination_set.push([x,y,total_price]);
+        }
     }
+    
     return combination_set;
 }
+*/
 
 
 
 
 module.exports.calcCost(mapOutput){
-    var combination_set = makeComSet(mapOutput);
+    //var combination_set = makeComSet(mapOutput);
     var ret = [];
     for(var i = 0; i < combination_set.length; i++){
-        var sx = combination_set[i][0][0];
-        var sy = combination_set[i][0][1];
-        //var info = combination_set[i][0][2];
+        var sx = combination_set[i]['path'][0][0];
+        var sy = combination_set[i]['path'][0][1];
         var cost = [];
         for(var j = 1; j < combination_set[i].length; j++){
-            var ex = combination_set[i][j][0];
-            var ey = combination_set[i][j][1];
+            var ex = combination_set[i]['path'][j][0];
+            var ey = combination_set[i]['path'][j][1];
             cost.push(searchPubTransPathAJAX(sx,sy,ex,ey));
             var sx = ex;
             var sy = ey;
         }
-        ret.push(onePath(cost));
+        ret.push([onePath(cost),combination_set[i]['total_price']]);
     }
     return ret;
 }

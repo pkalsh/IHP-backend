@@ -1,4 +1,3 @@
-
 /*
     받아오는 매개변수가 [ [[],[],[]], ... ,[[],[],[]] ...] 형태의  삼중리스트라고 가정.. 또는 4중
     combination_set = [
@@ -11,7 +10,6 @@
     ]
     info는 상품에 대한 정보를 담은 변수 또는 리스트
     [x,y,info]에서 x,y는 해당 위치의 좌표 vlaue
-
     아래 코드에서는 [x,y,info],[x,y,info]... 가 순서대로 나열되어있다고 가정.
 */
 
@@ -56,23 +54,23 @@ function calcCost(mapOutput){
             var sx = ex;
             var sy = ey;
         }
-        ret.push(everyPath(cost));
+        ret.push(onePath(cost));
     }
     return ret;
 }
 
-function everyPath(cost){
+function onePath(cost){
     path = {'payment':0, 'totalDistance':0, 'totalTime':0, 'totalWalk':0, 'totalWalkTime':0, 'path':[] };
     var i;
     for(i = 0; i < cost.length; i++){
-        path['payment'] += cost[0];
-        path['totalDistance'] += cost[1];
-        path['totalTime'] += cost[2];
-        path['totalWalk'] += cost[3];
-        path['totalWalkTime'] += cost[4];
-        path['path'].push(cost[5]).push(cost[6]);
+        path['payment'] += cost[i][0];
+        path['totalDistance'] += cost[i][1];
+        path['totalTime'] += cost[i][2];
+        path['totalWalk'] += cost[i][3];
+        path['totalWalkTime'] += cost[i][4];
+        path['path'].push(cost[i][5]).push(cost[i][6]);
     }
-    path['path'].push(cost[7]).push(cost[8]);
+    path['path'].push(cost[i][7]).push(cost[i][8]);
 
     return path;
 }
@@ -90,6 +88,26 @@ function makeComSet(mapOutput){
     }
     return combination_set;
 }
+
+function sortPath(criteria,everyPath){
+    everyPath.sort(function(a,b){
+        switch(criteria){
+            case 'payment':
+                return a.payment < b.payment ? -1 : a.payment > b.payment ? 1 : 0;
+            case 'totalDistance':
+                return a.totalDistance < b.totalDistance ? -1 : a.totalDistance > b.totalDistance ? 1 : 0;
+            case 'totalTime':
+                return a.totalTime < b.totalTime ? -1 : a.totalTime > b.totalTime ? 1 : 0;
+            case 'totalWalk':
+                return a.totalWalk < b.totalWalk ? -1 : a.totalWalk > b.totalWalk ? 1 : 0;
+            case 'totalWalkTime':
+                return a.totalWalkTime < b.totalWalkTime ? -1 : a.totalWalkTime > b.totalWalkTime ? 1 : 0;
+        }
+        
+    });
+    return everyPath;
+}
+
 
 /*
  * @POST("/map/location")

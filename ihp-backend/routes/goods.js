@@ -1,57 +1,120 @@
-var request = require('request');
-var convert = require('xml-js');
-var SERVICE_KEY = '=95yvl4Q2Y6DIGgpJ8C%2FdqYE%2FmSENoHJJPwqJv38n%2F8%2BdEBsQ4juKoFov5RbSMne0uY3Z7lSQmlNQ84rTk4dywQ%3D%3D'
-var url = 'http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService/getProductInfoSvc.do';
 
 /*
-server.js 에서 사용법 : goods.sendGoodInfo(goods.getGoodId('query'))
-*/
+ * routing functions for store-related request
+ *
+ * @date 2020-11-22
+ * @author pkalsh
+ * @updated 2020-11-26
+ */
 
-var makeJson = function(body){
-    var xml = convert.xml2json(body,{compact:false, spaces:4});
-    xml = JSON.parse(xml);
-    var myjson = {
-        "goodId":xml.elements[0].elements[0].elements[0].elements[0].elements[0].text,
-        "goodName":xml.elements[0].elements[0].elements[0].elements[1].elements[0].text,
-        "productEntpCode":xml.elements[0].elements[0].elements[0].elements[2].elements[0].text,
-        "goodUnitDivCode":xml.elements[0].elements[0].elements[0].elements[3].elements[0].text,
-        "goodBaseCnt":xml.elements[0].elements[0].elements[0].elements[4].elements[0].text,
-        "goodSmlclsCode":xml.elements[0].elements[0].elements[0].elements[5].elements[0].text,
-        "detailMean":xml.elements[0].elements[0].elements[0].elements[6].elements[0].text,
-        "goodTotalCnt":xml.elements[0].elements[0].elements[0].elements[7].elements[0].text,
-        "goodTotalDivCode":xml.elements[0].elements[0].elements[0].elements[8].elements[0].text
+const utils = require('../utils/utils');
+
+/*
+ *Item_Input:
+ *   @SerializedName("item_word")
+ *   var item_word: String,
+ *
+ *   @SerializedName("item_one")
+ *   var item_one: String,
+ *
+ *   @SerializedName("item_two")
+ *   var item_two: String,
+ *
+ *   @SerializedName("item_three")
+ *   var item_three: String,
+ *
+ */
+
+/*
+ * @POST("/item/list")
+ * fun requestItemList(@Body body: Item_Input): Single<ArrayList<Item_Output>>
+ */
+var listGoods = function(req, res) {
+    var paramType = req.body.item_one || req.query.item_one || req.params.item_one;
+    var paramSorting = req.body.item_two || req.query.item_two || req.params.item_two;
+    var paramWord = req.body.item_word || req.query.item_word || req.params.item_word;
+    var database = req.app.get('database');
+    console.log("/item/list/" + paramWord + "/" + paramType + "/" + paramSorting + " 요청 받음.");
+
+    // TODO 입력하지 않았을 땐 뭐로 오나요?
+    if(paramSorting == "") {
+        paramSotring = 'name';
     }
-    return myjson;
-}
 
-var getGoodId = function(query){
-    /* 들어온 쿼리에서 goodId를 분리  -> goodId 생성*/
-    var goodId = 15; // 임의 배정
-    return goodId;
-}
-var sendGoodInfo = function(goodId){    
-    getGoodInfo(goodId)
-    .then(function(goodJson){
-        console.log('goodJson입니다.'+JSON.stringify(goodJson));
-    })
-}
+    if (database.db) {
+        database.GoodsModel.findAllGoods(paramType, paramSorting, paramWord, function(err, results) {
+            if (err) {
+                console.error('전체 조회 중 에러 발생 : ' + err.stack);
+                utils.replyErrorCode(res);
+                return;
+            }
 
-var getGoodInfo = function(goodId){
-    var queryParams = '?' + encodeURIComponent('ServiceKey') + SERVICE_KEY; /* Service Key*/
-        queryParams += '&' + encodeURIComponent('goodId') + '=' + encodeURIComponent(goodId); /* */
-    var goodJson;
+            if (results) {
+                var arrResponse = []
+                for(let i=0; i < results.length; i++) {
+                    var item = {};
+                    var selected_doc = results[i]._doc;
+                    database.GoodsModel.sortPriceAsc(selected_doc._id, 
+                                                     (err, sortResult) => {
+                                                         if (err) console.dir(err);
+                                                         else {
+                                                             console.log('정렬 성공');
+                                                         }
+                                                     });
+                                                     
 
-    return new Promise(function(resolve,reject){
-        request({
-            url: url + queryParams,
-            method: 'GET'
-        }, function (error, response, body) {
-            goodJson = makeJson(body);
-            resolve(goodJson);
+                    item["id"] = selected_doc._id;
+                    item["name"] = selected_doc.name;
+                    if (selected_doc.priceInfo.length > 0) {
+                        item["priceInfo"] = selected_doc.priceInfo[0].price 
+                    }
+                    arrResponse.push(item);
+                }
+
+                var jsonResponse = { resCode: 1, result: arrResponse }
+                //console.dir(jsonResponse);
+                res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
+                res.write(JSON.stringify(jsonResponse));
+                res.end();
+            } else {
+                utils.replyErrorCode(res);
+            }
         });
-    })
+    } else {
+        utils.replyErrorCode(res);
+    }
 }
 
+/* 
+ * @POST("/item/info/{public_id}")
+ *    fun requestItemInfo(@Header(@Body body: public_id): Single<Item_Info>
+ */
+var searchById = function(req, res) {
+    var id = req.body.public_id || req.query.public_id || req.params.public_id;
+    console.log("/item/info/" + id + ": 요청 받음.");
+    var database = req.app.get('database');
 
-module.exports.sendGoodInfo = sendGoodInfo;
-module.exports.getGoodId = getGoodId;
+    if (database.db) {
+        database.GoodsModel.findById(id, function(err, resultInfo) {
+            if (err) {
+                console.error('전체 조회 중 에러 발생 : ' + err.stack);
+                utils.replyErrorCode(res);
+                return;
+            }
+
+            if (resultInfo) {
+                var jsonResponse = { resCode: 1, result: [resultInfo] };
+                res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
+                res.write(JSON.stringify(jsonResponse));
+                res.end();
+            } else {
+                utils.replyErrorCode(res);
+            }
+        });
+    } else {
+        utils.replyErrorCode(res);
+    }
+}
+
+module.exports.listGoods = listGoods;
+module.exports.searchById = searchById;

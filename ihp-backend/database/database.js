@@ -5,7 +5,6 @@
  * @date 2020-11-22
  * @author pkalsh
  */
-
 var mongoose = require('mongoose');
 var database = {};
 
@@ -15,7 +14,6 @@ database.init = function(app, config) {
 }
 
 function connect(app, config) {
-	console.log('connect() 호출됨.');
 	
     mongoose.Promise = global.Promise;  
 	mongoose.connect(config.db_url);
@@ -28,8 +26,8 @@ function connect(app, config) {
 		createSchema(app, config);
 		
 	});
-	database.db.on('disconnected', connect);
 
+	database.db.on('disconnected', connect);
 }
 
 function createSchema(app, config) {
@@ -43,8 +41,10 @@ function createSchema(app, config) {
 		database[curItem.schemaName] = curSchema;
 		database[curItem.modelName] = curModel;
 	}
-	
+
 	app.set('database', database);
+	
+		
 }
  
 

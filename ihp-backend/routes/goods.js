@@ -35,13 +35,14 @@ var listGoods = function(req, res) {
     var database = req.app.get('database');
     console.log("/item/list/" + paramWord + "/" + paramType + "/" + paramSorting + " 요청 받음.");
 
+    console.log(typeof(paramSorting));
     if(paramSorting == "") {
         paramSotring = "1";
     }
 
     if (database.db) {
         
-        database.GoodsModel.findAllGoods(paramType, paramWord, function(err, results) {
+        database.GoodsModel.findGoodsList(paramType, paramWord, function(err, results) {
             if (err) {
                 console.error('전체 조회 중 에러 발생 : ' + err.stack);
                 utils.replyErrorCode(res);
@@ -66,7 +67,10 @@ var listGoods = function(req, res) {
                     arrResponse.push(item);
                 }
 
+                console.log(arrResponse);
                 sortGoodsJsonResult(paramSorting, arrResponse);
+                console.log(arrResponse);
+
                 var jsonResponse = { resCode: 1, result: arrResponse };
                 res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
                 res.write(JSON.stringify(jsonResponse));
@@ -114,14 +118,14 @@ var searchById = function(req, res) {
 function sortGoodsJsonResult (criterion, response) {
     if (criterion == "1") {
         response.sort((left, right) => {
-            return left.priceInfo.price < right.priceInfo.price ? 
-                    -1 : left.priceInfo.price > right.priceInfo.price ? 1 : 0;
+            return left.priceInfo < right.priceInfo ? 
+                    -1 : left.priceInfo > right.priceInfo ? 1 : 0;
         });
     }
     else if (criterion == "2") {
         response.sort((left, right) => {
-            return left.priceInfo.price > right.priceInfo.price ? 
-                    -1 : left.priceInfo.price < right.priceInfo.price ? 1 : 0;
+            return left.priceInfo > right.priceInfo ? 
+                    -1 : left.priceInfo < right.priceInfo ? 1 : 0;
         });
     }
     else if (criterion == "3") {

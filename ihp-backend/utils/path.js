@@ -4,16 +4,12 @@
  * @Param end       : end point of path in geometry coordinates
  * @Param waypoints : all waypoints of path in geometry coordinates
  * @Param itemList  : all items in shopping list by _id in Goods Model
+ * @Param readius   : radius searching stores
  * 
- * @Return Form     :   "stores" : store mongoose id, store name, geomtry coordinates with index referenced by "buying_cases"
- *                      "buying_cases" : store_id (store mongoose id), price (price of the item in chosen store),
- *                                       idx (referencing index of "stores") 
- * 
- *                      [{
- *                          "stores': array of {_id, name, geometry} object,
- *                          "buying_cases" : array of { store_id, price } object => one case
- *                                           Actual saved cases is array of case (upper representation)
- *                      }]
+ * @Return Form     :   Array of {
+ *                          "total_price": total purchasing cost of corresponding path,
+ *                          "path": coordinates of path containing start, end, waypoints and stores
+ *                      ]
  * } 
  */
 exports.selectAllCasesOfBuying = async (database, start, end, waypoints, itemList, radius) => 
@@ -33,6 +29,10 @@ exports.selectAllCasesOfBuying = async (database, start, end, waypoints, itemLis
 
 
     const candidates = await drawUpCandidates(database, centerLong, centerLat, radius);
+    if (candidates.length == 0) {
+        return null;
+    }
+
     const sellingItemIdxForStores = await makeCombinationElements(database, candidates, itemList);
     const buyingCases = makeAllCombinations(sellingItemIdxForStores, candidates, itemNum, start, end, waypoints);
     

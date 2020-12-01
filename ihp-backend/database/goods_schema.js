@@ -39,7 +39,7 @@ SchemaObj.createSchema = function(mongoose) {
 		findByName: function(requestedName, callback) {
             return this.find({name: {$regex: requestedName}}, callback);
         },
-        findAllGoods: function(type, requestedName, callback) {
+        findGoodsList: function(type, requestedName, callback) {
             this.find({ name: {$regex: requestedName}, goodSmlType:type })
                 .populate('entp', 'name geometry address')
                 .populate('priceInfo.entp')

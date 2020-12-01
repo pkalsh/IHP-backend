@@ -4,7 +4,6 @@
  */
 
 module.exports = {
-	server_port: 3000,
 	db_url: 'mongodb://localhost:27017/local',
 	db_schemas: [
 	    {file:'./store_schema', collection:'stores', schemaName: 'StoreSchema', modelName:'StoreModel'},
@@ -16,5 +15,7 @@ module.exports = {
 		{file:'./store', path:'/market/list', method: 'listStores', type: 'post'},
 		{file:'./store', path:'/market/info', method: 'searchById', type: 'post'},
 		{file:'./map', path:'/map/location', method: 'showAllStores', type: 'post'},
-	]
+		{file:'./route', path:'/route/list', methodL: '', type: 'post'}
+	],
+	market_searching_radius: 5000
 }

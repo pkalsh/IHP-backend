@@ -32,23 +32,33 @@ function searchPubTransPathAJAX(sx,sy,ex,ey) {
 }
 
 
-async function calcCost(combination_set,criteria){
+async function calcCost(combination_set, criteria) {
+    //var combination_set = makeComSet(mapOutput);
     var ret = [];
-    for(var i = 0; i < combination_set.length; i++){
+    for (var i = 0; i < combination_set.length; i++) {
         var sx = combination_set[i]['path'][0][0];
         var sy = combination_set[i]['path'][0][1];
-        var cost = [];
-        for(var j = 1; j < combination_set[i].length; j++){
+        var cost = {};
+        cost.path = [];
+        cost.time = 0;
+        cost.distance = 0;
+        cost.price = 0;
+        for (var j = 1; j < combination_set[i]['path'].length; j++) {
             var ex = combination_set[i]['path'][j][0];
             var ey = combination_set[i]['path'][j][1];
             var data = await searchPubTransPathAJAX(sx, sy, ex, ey);
-            sort.sortPath(criteria,data);
-            cost.push(data);
+            mysort.sortPath(criteria,data);
+            cost.time += data['result']['path'][0]['info']['totalTime'];
+            cost.distance += data['result']['path'][0]['info']['totalDistance'];
+            cost.price += data['result']['path'][0]['info']['payment'];
+            cost.path.push(data['result']['path'][0]['subPath']);
             var sx = ex;
             var sy = ey;
         }
-        ret.push([cost,combination_set[i]['total_price']]);
+        cost.price +=  + combination_set[i]['total_price'];
+        ret.push(cost);
     }
+    console.log(ret);
     return ret;
 }
 

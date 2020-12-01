@@ -13,5 +13,6 @@ module.exports = {
 	route_info: [
 	    //{file:'filename', path:'url', method:'function_name', type:'method'}	 
 	    
-	]
+	],
+	API_KEY : "l7xx7aef2b3562da4bc48754861c040880ce" 
 }

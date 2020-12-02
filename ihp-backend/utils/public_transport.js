@@ -4,20 +4,18 @@ require('dotenv').config();
 
 // 대중교통 길찾기
 function searchPubTransPathAJAX(sx,sy,ex,ey) {
-    return new Promise(function(resolve,reject){
+    return new Promise(async function(resolve,reject){
         var xhr = new XMLHttpRequest();
         var url = `https://api.odsay.com/v1/api/searchPubTransPath?SX=${sx}&SY=${sy}&EX=${ex}&EY=${ey}&apiKey=${process.env.PUBLIC_TRANSPORT_KEY}`;
-        xhr.open("GET", url, true);
+        
+        xhr.open("GET", url, false);
         xhr.send();
-        xhr.onreadystatechange = function() {
-    
-            if (xhr.readyState == 4 && xhr.status == 200) {
-                var section = JSON.parse(xhr.responseText);
-                resolve(section);
-            }
-            else {
-                reject(xhr.responseText);
-            }
+        
+        if (xhr.status === 200) {
+            resolve(JSON.parse(xhr.responseText));
+        }
+        else {
+            reject(null);
         }
     });
 }
@@ -38,7 +36,11 @@ async function calcCost(combination_set, criteria) {
         for (var j = 1; j < combination_set[i]['path'].length; j++) {
             var ex = combination_set[i]['path'][j][0];
             var ey = combination_set[i]['path'][j][1];
-            const data = await searchPubTransPathAJAX(sx, sy, ex, ey);
+            
+            var data;
+            try {
+                data = await searchPubTransPathAJAX(sx, sy, ex, ey);
+            } catch(err) { data = null; }
 
             if (data == null) continue;
 
@@ -57,6 +59,14 @@ async function calcCost(combination_set, criteria) {
     return ret;
 }
 
+async function sendingFormat(mapOutput){
+    var price = calcCost(mapOutput,'payment').then(function(value){
+        return value;
+    });
+    var time = calcCost(mapOutput,'totalTime').then(function(value){
+        return value;
+    });
+    return ({'price':await price, 'time':await time});
+}
 
-
-module.exports.calcCost = calcCost;
+module.exports.getPublicTransportLowestCost = sendingFormat;

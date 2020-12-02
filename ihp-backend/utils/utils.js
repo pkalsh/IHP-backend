@@ -25,7 +25,7 @@ exports.makeQuery = function(baseURI, parameters) {
 }
 
   
-exports.sortPath = function(criteria, everyPath) {
+exports.sortPublicTransportPath = function(criteria, everyPath) {
     everyPath.sort(function(a,b){
         everyPath['result']['path'].sort(function(a,b){
             switch(criteria){

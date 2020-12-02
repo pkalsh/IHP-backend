@@ -25,14 +25,12 @@ var config = require('./config/config');
 var database = require('./database/database');
 var route_loader = require('./routes/route_loader');
 
+require('dotenv').config();
 const cors = require('cors');
 var app = express();
 
 app.set('views', __dirname + '/views');
-//app.set('view engine', 'ejs');
 
-
-console.log('config.server_port : %d', config.server_port);
 app.set('port', process.env.PORT || 3000);
  
 

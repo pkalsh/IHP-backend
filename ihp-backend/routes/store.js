@@ -1,50 +1,107 @@
-var request = require('request');
-var xml2js = require('xml2js');
-var parser = new xml2js.Parser();
+/*
+ * routing functions for store-related request
+ *
+ * @date 2020-11-22
+ * @author pkalsh
+ * @updated 2020-11-23
+ */
 
-// 매장 ID로 해당 매장 정보 조회
+/*
+ * Market_Input:
+ *   @SerializedName("market_word")
+ *   var market_word: String,
 
-var url = 'http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService/getStoreInfoSvc.do';
+ *   @SerializedName("market_one")
+ *   var market_one: String,
 
-var queryParams = '?' + encodeURIComponent('entpId') + '=' + encodeURIComponent('115') + '&'
-+ encodeURIComponent('ServiceKey') + 
-'=95yvl4Q2Y6DIGgpJ8C%2FdqYE%2FmSENoHJJPwqJv38n%2F8%2BdEBsQ4juKoFov5RbSMne0uY3Z7lSQmlNQ84rTk4dywQ%3D%3D';
+ *   @SerializedName("market_two")
+ *   var market_two: String,
 
-console.log(url);
+ *   @SerializedName("market_three")
+ *   var market_three: String,
+ */
 
-request({
-    url: url + queryParams,
-    // url: url,
-    method: 'GET'
-}, function (error, response, body) {
-    //console.log('Status', response.statusCode);
-    //console.log('Headers', JSON.stringify(response.headers));
-    //console.log('Reponse received', body);
-    var xml = body;
-    parser.parseString(xml, (err, result) => {
+const utils = require('../utils/utils');
 
-        // 매장명
-        store_name = result['response']['result'][0]
-        ['iros.openapi.service.vo.entpInfoVO'][0]['entpName'][0];
-        
-        console.log(store_name)
+ /*
+  * @POST("/market/list")
+  * 	fun requestMarketList(@Body body: Market_Input): Single<ArrayList<Market_Output>>
+  */ 
+var listStores = function(req, res) {
+ 
+    var paramName = req.body.market_word || req.query.market_word || req.params.market_word;
+	var paramType = req.body.market_one || req.query.market_one || req.params.market_one;
+	var paramSC = req.body.market_two || req.query.market_two || req.params.market_two;
+    console.log("/market/list/" + paramName + "/" + paramType + "/" + paramSC + " 요청 받음.");
 
-        // 매장 주소
-        store_addr = result['response']['result'][0]
-        ['iros.openapi.service.vo.entpInfoVO'][0]['plmkAddrBasic'][0]
-        + result['response']['result'][0]
-        ['iros.openapi.service.vo.entpInfoVO'][0]['plmkAddrDetail'][0];
+	var database = req.app.get('database');
+	
+	if (database.db) {
+		database.StoreModel.searchStore(paramName,
+										 paramType,
+										 paramSC,
+										 function(err, results) {
+            if (err) {
+                console.error('전체 조회 중 에러 발생 : ' + err.stack);
+                utils.replyErrorCode(res);
+                return;
+            }
 
-        console.log(store_addr)
+            if (results) {
+                var arrResponse = []
+                for(let i=0; i < results.length; i++) {
+                    var item = {};
+                    item["id"] = results[i]._doc._id;
+                    item["name"] = results[i]._doc.name;
+                    item["address"] = results[i]._doc.address;
+                    arrResponse.push(item);
+                }
 
-        // 매장 전화번호
-        store_phone = result['response']['result'][0]
-        ['iros.openapi.service.vo.entpInfoVO'][0]['entpTelno'][0];
+                var jsonResponse = { resCode: 1, result: arrResponse }
+                res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
+                res.write(JSON.stringify(jsonResponse));
+                res.end();
+            } else {
+                utils.replyErrorCode(res);
+            }
+        });
+    } else {
+        utils.replyErrorCode(res);
+    }
+	
+};
 
-        console.log(store_phone)
+ /*
+  * @POST("/market/info/")
+  * 	fun requestMarketInfo(@Header(@Body body: public_id): Single<Market_Info>
+  */
+ var searchById = function(req, res) {
+    var id = req.body.public_id || req.query.public_id || req.params.public_id;
+    console.log("/market/info/" + id + ": 요청 받음.");
+    var database = req.app.get('database');
 
-        
-    });
+    if (database.db) {
+        database.StoreModel.findById(id, function(err, resultInfo) {
+            if (err) {
+                console.error('전체 조회 중 에러 발생 : ' + err.stack);
+                utils.replyErrorCode(res);
+                return;
+            }
 
-});
+            if (resultInfo) {
+                var jsonResponse = { resCode: 1, result: resultInfo };
+                console.dir(jsonResponse);
+                res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
+                res.write(JSON.stringify(jsonResponse));
+                res.end();
+            } else {
+                utils.replyErrorCode(res);
+            }
+        });
+    } else {
+        utils.replyErrorCode(res);
+    }
+}
 
+module.exports.listStores = listStores;
+module.exports.searchById = searchById;

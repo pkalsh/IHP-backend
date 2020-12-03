@@ -10,22 +10,6 @@
 const utils = require('../utils/utils');
 
 /*
- *Item_Input:
- *   @SerializedName("item_word")
- *   var item_word: String,
- *
- *   @SerializedName("item_one")
- *   var item_one: String,
- *
- *   @SerializedName("item_two")
- *   var item_two: String,
- *
- *   @SerializedName("item_three")
- *   var item_three: String,
- *
- */
-
-/*
  * @POST("/item/list")
  * fun requestItemList(@Body body: Item_Input): Single<ArrayList<Item_Output>>
  */

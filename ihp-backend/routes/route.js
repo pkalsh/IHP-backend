@@ -1,4 +1,6 @@
-const config = require('../config/config');
+const { getLowestCostPath } = require('../utils/cost');
+const { selectAllCasesOfBuying } = require('../utils/path');
+const { getPublicTransportLowestCost } = require('../utils/public_transport');
 
 /*
  * @POST("/route/list")
@@ -16,25 +18,16 @@ module.exports.showLowestCostPath = async (req, res) => {
     var jsonResponse = { };
     res.writeHead('200', {'Content-Type':'application/json;charset=utf8'});
 
-    const allCases = await selectAllCasesOfBuying(database, paramSrc, paramDst, paramWaypoints, itemList, config.market_searching_radius);
+    const allCases = await selectAllCasesOfBuying(database, paramSrc, paramDst, paramWaypoints, itemList, 2000);
     if (allCases == null) {
         jsonResponse['resCode'] = 0;
         jsonResponse['error_msg'] = "주위에 검색가능한 매장이 없습니다.";
     }
     else {
-
-        // const transportCase = await transport(allCases);
-        // const walkCase = await walk(allCases);
-        var resultArr = [];
-        var tp = {};
-        var walk = {};
-
-        walk['method'] = 1;
-
-        tp['method'] = 2;
+        const lp = await getLowestCostPath(allCases.slice(0,1));
+    
         jsonResponse['resCode'] = 1;
-        resultArr.push(walk); resultArr.push(tp);
-        jsonResponse['result'] = resultArr;
+        jsonResponse['result'] = lp.time;
     }
 
     res.write(JSON.stringify(jsonResponse));

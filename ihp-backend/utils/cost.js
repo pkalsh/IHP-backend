@@ -13,7 +13,6 @@ function searchPubTransPathAJAX(sx,sy,ex,ey) {
         
         if (xhr.status === 200) {
             var jsonResponse = JSON.parse(xhr.responseText);
-            console.log (jsonResponse.hasOwnProperty('error'));
             if (!jsonResponse.hasOwnProperty('error')) {
                 resolve(JSON.parse(xhr.responseText));
             }
@@ -68,7 +67,6 @@ async function calcCost(combination_set, criteria) {
                             sx=ex; sy=ey;
                             continue;
                         } catch(walkError) {
-                            console.error(walkError);
                             data = null;
                         }
                     }
@@ -83,7 +81,12 @@ async function calcCost(combination_set, criteria) {
                 for (const subPath of data['result']['path'][0]['subPath']) {
                     let pushed = { 'trafficType' : subPath.trafficType,
                                     'distance'   : subPath.distance, 
-                                    'sectionTime': subPath.sectionTime };
+                                    'sectionTime': subPath.sectionTime,
+                                  };
+
+                    if (subPath.lane != undefined) {
+                        pushed['method'] = subPath.lane;
+                    }
                     cost.path.push(pushed);
                 }
                 sx = ex;
@@ -93,15 +96,20 @@ async function calcCost(combination_set, criteria) {
         cost.price +=  + combination_set[i]['total_price'];
         ret.push(cost);
     }
-    console.log(ret);
     return ret;
 }
 
 async function sendingFormat(mapOutput){
     var price = calcCost(mapOutput,'payment').then(function(value){
+        value.sort(function(a,b) {
+            return a['price'] < b['price'] ? -1 : a['price'] > b['price'] ? 1 : 0;
+        });
         return value;
     });
     var time = calcCost(mapOutput,'totalTime').then(function(value){
+        value.sort(function(a,b) {
+            return a['time'] < b['time'] ? -1 : a['time'] > b['time'] ? 1 : 0;
+        });
         return value;
     });
     return ({'price':await price, 'time':await time});
@@ -128,7 +136,6 @@ function searchWalkPath(url) {
             var tTime =  (parseInt(resultData[0].properties.totalTime/60));
 
             result={'time':tTime, 'distance': tDistance};
-            console.dir(result);
             resolve(result);
         }
         else {
@@ -141,17 +148,12 @@ function searchWalkPath(url) {
 }
 
 async function calcWalkCase(input){
-    console.log(input);
     var url ='https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1';
 
     const [start, end] = input;
     const [sx,sy] = start;
     const [ex,ey] = end;
-
-    console.log(sx + ", " + sy);
-    console.log(ex + ", " + ey);
-        
-
+      
     //${sx}
     var basic_param = url
      + "&appKey=" + process.env.TMAP_API_KEY
